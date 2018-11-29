@@ -1,5 +1,5 @@
 
-from flask import Flask
+from flask import Flask, jsonify, abort, request
 from config import Config
 
 app = Flask(__name__)
@@ -13,13 +13,42 @@ ma = Marshmallow(app)
 
 from models import Product
 from schemas import products_schema
+from schemas import product_schema
 
 
 @app.route('/hello')
 def hello():
     return "Hello World!"
 
-@app.route('/products')
+@app.route('/products', methods=["GET", "POST"])
 def products():
-    products = db.session.query(Product).all() # SQLAlchemy request => 'SELECT * FROM products'
-    return products_schema.jsonify(products)
+    if request.method == "GET":
+        products = db.session.query(Product).all() # SQLAlchemy request => 'SELECT * FROM products'
+        result = products_schema.jsonify(products)
+    else:
+        product_name = request.json['name']
+        product_desc = request.json['description']
+        new_product = Product(product_name, product_desc)
+        db.session.add(new_product)
+        db.session.commit()
+        result = product_schema.jsonify(new_product)
+    return result
+
+@app.route('/products/<int:id>', methods=['GET', 'DELETE', 'PATCH'])
+def product_by_id(id):
+    if request.method == "GET":
+        product = db.session.query(Product).get(id)
+        result = product_schema.jsonify(product)
+    elif request.method == 'PATCH':
+        product = db.session.query(Product).get(id)
+        product.name = request.json['name']
+        product.description = request.json['description']
+        db.session.commit()
+        result = product_schema.jsonify(product)
+    else:
+        product = db.session.query(Product).get(id)
+        db.session.delete(product)
+        db.session.commit()
+        result = product_schema.jsonify(product)
+    return result
+
