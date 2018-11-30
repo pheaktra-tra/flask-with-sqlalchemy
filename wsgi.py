@@ -1,5 +1,5 @@
 
-from flask import Flask, jsonify, abort, request
+from flask import Flask, jsonify, abort, request, render_template
 from config import Config
 
 app = Flask(__name__)
@@ -14,6 +14,16 @@ ma = Marshmallow(app)
 from models import Product
 from schemas import products_schema
 from schemas import product_schema
+
+@app.route('/')
+def home():
+    products = db.session.query(Product).all()
+    return render_template('home.html', products=products)
+
+@app.route('/product_detail/<id>')
+def product_detail():
+    product = db.session.query(Product).get(id)
+    return render_template('product_detail.html', products=product)
 
 
 @app.route('/hello')
@@ -50,5 +60,6 @@ def product_by_id(id):
         db.session.delete(product)
         db.session.commit()
         result = product_schema.jsonify(product)
-    return result
+
+    return render_template('product_detail.html', product=product)
 
